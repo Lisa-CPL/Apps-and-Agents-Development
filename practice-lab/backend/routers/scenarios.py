@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from ..lib.registry import REGISTRY, UnknownMiniAppError
-from ..lib.models import Turn
-from ..lib.engine import Engine, SafetyCheckError
-from ..lib.llm_client import LLMClient, LLMTimeoutError, LLMRateLimitError, LLMInvalidOutputError
-from ..lib.safety import SafetyChecker
-from ..lib.ip_resources_loader import IPResourceLoader
+from lib.registry import REGISTRY, UnknownMiniAppError
+from lib.models import Turn
+from lib.engine import Engine, SafetyCheckError
+from lib.llm_client import LLMClient, LLMTimeoutError, LLMRateLimitError, LLMInvalidOutputError
+from lib.safety import SafetyChecker
+from lib.ip_resources_loader import IPResourceLoader
 
 router = APIRouter()
 

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 
-from ..lib.registry import REGISTRY, UnknownMiniAppError
+from lib.registry import REGISTRY, UnknownMiniAppError
 
 router = APIRouter()
 
