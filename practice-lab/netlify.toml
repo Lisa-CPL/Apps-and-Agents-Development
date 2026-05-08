@@ -1,0 +1,40 @@
+[build]
+  publish = "frontend/dist"
+  command = "cd frontend && npm install && npm run build"
+
+[build.environment]
+  NODE_VERSION = "20"
+  PYTHON_VERSION = "3.11"
+
+[functions]
+  directory = "netlify/functions"
+
+[[redirects]]
+  from = "/api/health"
+  to = "/.netlify/functions/health"
+  status = 200
+
+[[redirects]]
+  from = "/api/mini-apps/:id"
+  to = "/.netlify/functions/mini_apps_get"
+  status = 200
+
+[[redirects]]
+  from = "/api/mini-apps"
+  to = "/.netlify/functions/mini_apps_list"
+  status = 200
+
+[[redirects]]
+  from = "/api/scenarios"
+  to = "/.netlify/functions/scenarios_create"
+  status = 200
+
+[[redirects]]
+  from = "/api/responses"
+  to = "/.netlify/functions/responses_create"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
