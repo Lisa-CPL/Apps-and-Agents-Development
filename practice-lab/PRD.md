@@ -947,8 +947,4 @@ If CPL has a hard requirement to ship on Bubble + AntiGravity, this PRD will nee
 ## 17. Acceptance Criteria for v1
 
 - A new CPL member can land on the hub, pick any of the 6 confirmed mini-apps, complete the full orientation → scenario → response → feedback → retry / new-scenario loop, and return to the hub, end-to-end, without errors.
-- The feedback panel always shows the user's response verbatim alongside the assessment.
 - All six mini-apps share the same React shell and the same backend evaluation engine. Adding a seventh mini-app requires only a new definition file on the backend and zero frontend changes.
-- The neutrality and content-safety checks run on every LLM output. Logged failures are zero in a 50-session manual smoke test across all six mini-apps.
-- The Lighthouse accessibility score for the hub and mini-app shell is ≥ 95.
-- The full Layer 1 and Layer 2 test suites (see §9) pass at the release thresholds: 100% schema validity, ≥98% heuristic pass rate, LLM-judge mean ≥4.0 across all five dimensions, zero hard fails on political-side and moral-verdict heuristics.
