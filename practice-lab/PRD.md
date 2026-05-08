@@ -23,7 +23,7 @@ This PRD covers the hub plus the **6 confirmed mini-apps**. The 4 proposed mini-
 **Tech stack at a glance**
 - Frontend: React (TypeScript), Vite build, Tailwind CSS
 - Backend: Python 3.11+, deployed as **Netlify Functions** (serverless handlers)
-- LLM: Anthropic Claude (or equivalent), accessed server-side from Functions
+- LLM: Google AI Studio (Gemini), accessed server-side from Functions
 - Session state (v1): **Held entirely in the frontend.** The rolling 6-turn context window lives in React state and is sent on each request. The backend is fully stateless.
 - Datastore (v1): **None.** No database, no Blobs, no Redis.
 - Deployment target: **Netlify** — single site hosts the static React build and the Python Functions, exposed under `/api/*` via Netlify's redirects
@@ -64,7 +64,7 @@ Relatively new CPL members. No prior experience with CPL frameworks is assumed. 
    │  ┌────────────────────┐  │         │  ┌───────────────┐              │
    │  │  React UI          │  │ ──GET── │  │ Static React  │              │       ┌──────────────┐
    │  │                    │  │ <─────  │  │ build (CDN)   │              │       │ LLM Provider │
-   │  │  Session state:    │  │         │  └───────────────┘              │       │ (Claude API) │
+   │  │  Session state:    │  │         │  └───────────────┘              │       │ (Google AI Studio) │
    │  │  • mini_app_id     │  │         │                                 │       └──────┬───────┘
    │  │  • current scenario│  │ ──POST─▶│  ┌───────────────┐              │              │
    │  │  • turns[] (≤6)    │  │ <──────  │  │   Netlify     │  ────────────────────────▶ │
@@ -264,7 +264,7 @@ practice-lab/
             ├── registry.py            # MiniAppRegistry (lookup by id)
             ├── models.py              # Pydantic models
             ├── engine.py              # generic scenario + evaluation engine
-            ├── llm_client.py          # Anthropic client wrapper
+            ├── llm_client.py          # Google AI Studio client wrapper
             ├── safety.py              # neutrality + content-safety checks
             └── ip_resources/          # CPL IP loaded into prompts
                 ├── moral_foundations.md
@@ -898,7 +898,7 @@ These are loaded as static resources on the backend at startup. Updates to CPL I
 
 ## 13. Tool Integrations (Source Spec)
 
-The source spec references Bubble for UI and AntiGravity for AI logic. The architecture in this PRD replaces both with React on Netlify (UI) and Python Netlify Functions calling Claude (AI logic). Google Docs remains the source of CPL training curriculum and IP and feeds the prompt resource files.
+The source spec references Bubble for UI and AntiGravity for AI logic. The architecture in this PRD replaces both with React on Netlify (UI) and Python Netlify Functions calling Google AI Studio (AI logic). Google Docs remains the source of CPL training curriculum and IP and feeds the prompt resource files.
 
 If CPL has a hard requirement to ship on Bubble + AntiGravity, this PRD will need a follow-up alignment session — Netlify is fundamentally incompatible with a Bubble-hosted UI.
 
@@ -918,7 +918,7 @@ If CPL has a hard requirement to ship on Bubble + AntiGravity, this PRD will nee
 
 1. ~~**Hosting and deployment.**~~ **Resolved:** Netlify (frontend + Python Functions + Blobs) per CPL direction.
 2. **Netlify plan tier.** Confirm which Netlify plan CPL is on — this determines Function execution timeout (10s standard vs. 26s on higher tiers), Blobs quota, and bandwidth. If on the standard tier, evaluation prompts must be tuned to fit comfortably under 10s.
-3. **LLM provider and model.** Confirm Claude as the model and confirm budget/quota assumptions.
+3. **LLM provider and model.** Confirm Google AI Studio (Gemini) as the model and confirm budget/quota assumptions.
 4. **Topic library for scenarios.** Should scenario topics be drawn from a curated CPL list, or generated freely within neutrality guardrails?
 5. **Bubble/AntiGravity alignment.** Is the React + Netlify direction acceptable, or is Bubble required (see §13)?
 6. **User-supplied topics in Mini-App 4.** Source spec lists this as optional. Confirm in or out for v1.
