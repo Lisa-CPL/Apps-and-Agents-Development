@@ -2,6 +2,14 @@
   publish = "frontend/dist"
   command = "cd frontend && npm install && npm run build"
 
+[dev]
+  command = "cmd /c cd frontend && npm run dev"
+  targetPort = 3000
+  port = 8888
+  publish = "frontend/dist"
+  autoLaunch = false
+  framework = "#custom"
+
 [build.environment]
   NODE_VERSION = "20"
   PYTHON_VERSION = "3.11"
