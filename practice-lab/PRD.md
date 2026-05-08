@@ -1,12 +1,13 @@
 # Practice Lab — Product Requirements Document
 
 **Product:** CPL Practice Lab (App 3 of 3, Tier 1, Mini-App Library)
-**Document Version:** 1.4 — Draft
+**Document Version:** 1.5 — Draft
 **Status:** Pending Engineering Review
 **Source Spec:** App3_Practice_Lab_Spec
 **Audience:** Product, Engineering, Design
-**Last Updated:** April 25, 2026
+**Last Updated:** May 8, 2026
 **Changelog:**
+- v1.5 — Switched backend from Netlify Functions (serverless) to FastAPI. Repository layout, handler examples, deployment constraints, and open questions updated accordingly. Sections 1, 4, 8.2, 9, 10, 14, 15 revised.
 - v1.4 — New §9 Testing & Behavioral Evaluation: three-layer strategy (deterministic CI tests, prompt behavioral evals against the real LLM, production monitoring), with explicit handling of the "is the bot good?" problem via heuristic checks, LLM-as-judge, and CPL human review. CPL eval-set authorship called out as a gating dependency. Subsequent sections renumbered §10–§17. Acceptance criteria updated.
 - v1.3 — Removed server-side session storage. Conversation state now lives entirely in React state on the frontend and is sent in the request body on each call. Backend is fully stateless: no Blobs, no datastore, no `/api/sessions` endpoints. Sections 1, 4, 8.1, 8.2, 9 revised.
 - v1.2 — Backend section (§8.2) substantially expanded: repository layout, registry mechanism, generic engine, worked request lifecycle, error model, testing strategy.
@@ -22,11 +23,11 @@ This PRD covers the hub plus the **6 confirmed mini-apps**. The 4 proposed mini-
 
 **Tech stack at a glance**
 - Frontend: React (TypeScript), Vite build, Tailwind CSS
-- Backend: Python 3.11+, deployed as **Netlify Functions** (serverless handlers)
-- LLM: Google AI Studio (Gemini), accessed server-side from Functions
+- Backend: Python 3.11+, **FastAPI** — ASGI server, deployed as a standalone service
+- LLM: Google AI Studio (Gemini), accessed server-side from the FastAPI app
 - Session state (v1): **Held entirely in the frontend.** The rolling 6-turn context window lives in React state and is sent on each request. The backend is fully stateless.
 - Datastore (v1): **None.** No database, no Blobs, no Redis.
-- Deployment target: **Netlify** — single site hosts the static React build and the Python Functions, exposed under `/api/*` via Netlify's redirects
+- Deployment target: React build served as static files (CDN / any static host); FastAPI backend deployed as a standalone ASGI service (e.g., Railway, Fly.io, or any container host), exposed under `/api/*`
 
 ---
 
@@ -58,25 +59,22 @@ Relatively new CPL members. No prior experience with CPL frameworks is assumed. 
 ### 4.1 High-Level Shape
 
 ```
-   ┌──────────────────────────┐         ┌─────────────────────────────────┐
-   │         Browser          │         │         Netlify Site            │
-   │                          │         │                                 │
-   │  ┌────────────────────┐  │         │  ┌───────────────┐              │
-   │  │  React UI          │  │ ──GET── │  │ Static React  │              │       ┌──────────────┐
-   │  │                    │  │ <─────  │  │ build (CDN)   │              │       │ LLM Provider │
-   │  │  Session state:    │  │         │  └───────────────┘              │       │ (Google AI Studio) │
-   │  │  • mini_app_id     │  │         │                                 │       └──────┬───────┘
-   │  │  • current scenario│  │ ──POST─▶│  ┌───────────────┐              │              │
-   │  │  • turns[] (≤6)    │  │ <──────  │  │   Netlify     │  ────────────────────────▶ │
-   │  └────────────────────┘  │         │  │  Functions    │  <─────────────────────────  │
-   │                          │         │  │   (Python)    │              │
-   └──────────────────────────┘         │  └───────────────┘              │
-                                        │                                 │
-                                        │      (no datastore)             │
-                                        └─────────────────────────────────┘
+   ┌──────────────────────────┐   ┌───────────────┐   ┌─────────────────────┐
+   │         Browser          │   │  Static Host  │   │   FastAPI Backend   │
+   │                          │   │    (CDN)      │   │   (ASGI service)    │
+   │  ┌──────────────────┐  │ ──GET── │               │   │  ┌───────────────┐  │   ┌────────────────┐
+   │  │  React UI          │  │ <─────  │  React build  │   │  │  /api routes  │  │   │   LLM Provider  │
+   │  │                    │  │   │               │   │  │               │  │   │ (Google AI    │
+   │  │  Session state:    │  │   └───────────────┘   │  │  Engine +     │  │   │  Studio)       │
+   │  │  • mini_app_id     │  │                       │  │  Registry +   │  │   └───────┬────────┘
+   │  │  • current scenario│  │ ──POST─────────────────▶│  │  Safety       │  │─────────▶
+   │  │  • turns[] (≤6)    │  │ <─────────────────  │  └───────────────┘  │◄─────────
+   │  └──────────────────┘  │                       │                     │
+   │                          │                       │   (no datastore)    │
+   └──────────────────────────┘                       └─────────────────────┘
 ```
 
-The Netlify site serves the static React build from its CDN. The same site exposes Python Netlify Functions under `/api/*` (configured via `netlify.toml` redirects). All LLM calls happen inside Functions; the browser never holds an API key.
+The React build is served as static files from any CDN or static host. The FastAPI backend runs as a standalone ASGI service, exposing all `/api/*` routes. All LLM calls happen inside the FastAPI app; the browser never holds an API key.
 
 **Session state lives entirely in the browser.** The React app holds the active mini-app id, the current scenario, and the rolling 6-turn context window in component state. Each call to `/scenarios` or `/responses` includes the conversation history in the request body. The backend treats every request as standalone — no session lookup, no datastore, no per-user state.
 
@@ -235,44 +233,44 @@ Each mini-app below specifies the inputs the engine consumes, the criteria it ev
 - **Loading states:** Scenario generation and evaluation each require an LLM round-trip. The UI must show non-blocking progress indicators with descriptive text ("Generating scenario…", "Evaluating your response…").
 - **Error states:** Network errors, LLM timeouts, and content-policy refusals each have distinct, friendly recovery paths (retry, new scenario, return to hub).
 
-### 8.2 Backend (Python Netlify Functions)
+### 8.2 Backend (Python FastAPI)
 
-The backend is a set of Python Netlify Functions, each handling one route. Functions are stateless across invocations — every request starts cold (or warm-pooled by Netlify), so any state that must outlive a single request lives in Netlify Blobs.
+The backend is a FastAPI application, fully stateless — every request is self-contained and no per-request state is persisted between calls.
 
 #### 8.2.1 Repository Layout
 
 ```
 practice-lab/
-├── netlify.toml                       # build config + /api/* redirects
 ├── frontend/                          # React (Vite + TS), see §8.1
-└── netlify/
-    └── functions/
-        ├── health.py                  # GET  /api/health
-        ├── mini_apps_list.py          # GET  /api/mini-apps
-        ├── mini_apps_get.py           # GET  /api/mini-apps/:id
-        ├── scenarios_create.py        # POST /api/scenarios
-        ├── responses_create.py        # POST /api/responses
-        └── _lib/                      # shared modules (NOT exposed as functions)
-            ├── definitions/           # ← mini-app definitions live here
-            │   ├── __init__.py        # registry assembly
-            │   ├── reflect_and_check.py
-            │   ├── follow_the_thread.py
-            │   ├── read_between_the_lines.py
-            │   ├── say_it_with_context.py
-            │   ├── under_the_surface.py
-            │   └── what_did_you_mean.py
-            ├── registry.py            # MiniAppRegistry (lookup by id)
-            ├── models.py              # Pydantic models
-            ├── engine.py              # generic scenario + evaluation engine
-            ├── llm_client.py          # Google AI Studio client wrapper
-            ├── safety.py              # neutrality + content-safety checks
-            └── ip_resources/          # CPL IP loaded into prompts
-                ├── moral_foundations.md
-                ├── neutrality_norms.md
-                └── feedback_tone_rubric.md
+└── backend/
+    ├── main.py                        # FastAPI app + router registration
+    ├── requirements.txt
+    ├── routers/
+    │   ├── health.py                  # GET  /api/health
+    │   ├── mini_apps.py               # GET  /api/mini-apps, GET /api/mini-apps/{id}
+    │   ├── scenarios.py               # POST /api/scenarios
+    │   └── responses.py               # POST /api/responses
+    └── lib/                           # shared modules
+        ├── definitions/               # ← mini-app definitions live here
+        │   ├── __init__.py            # registry assembly
+        │   ├── reflect_and_check.py
+        │   ├── follow_the_thread.py
+        │   ├── read_between_the_lines.py
+        │   ├── say_it_with_context.py
+        │   ├── under_the_surface.py
+        │   └── what_did_you_mean.py
+        ├── registry.py                # MiniAppRegistry (lookup by id)
+        ├── models.py                  # Pydantic models
+        ├── engine.py                  # generic scenario + evaluation engine
+        ├── llm_client.py              # Google AI Studio client wrapper
+        ├── safety.py                  # neutrality + content-safety checks
+        └── ip_resources/              # CPL IP loaded into prompts
+            ├── moral_foundations.md
+            ├── neutrality_norms.md
+            └── feedback_tone_rubric.md
 ```
 
-The split between `netlify/functions/*.py` (one per route) and `netlify/functions/_lib/` (shared logic) is the load-bearing structure. Functions are thin HTTP adapters; all real work lives in `_lib`. Netlify treats files prefixed with `_` as non-deployable shared code, so this layout works natively.
+The split between `backend/routers/` (one file per route group) and `backend/lib/` (shared logic) is the load-bearing structure. Routers are thin HTTP adapters; all real work lives in `lib`. The FastAPI app in `main.py` registers all routers under the `/api` prefix.
 
 #### 8.2.2 HTTP API
 
@@ -280,11 +278,11 @@ The API is fully stateless. There are no session endpoints. Every call to `/api/
 
 | Method | Path | Function | Purpose |
 |---|---|---|---|
-| GET | `/api/health` | `health.py` | Liveness probe. |
-| GET | `/api/mini-apps` | `mini_apps_list.py` | List all registered mini-apps for the hub. |
-| GET | `/api/mini-apps/{id}` | `mini_apps_get.py` | Get a single mini-app's metadata and orientation copy. |
-| POST | `/api/scenarios` | `scenarios_create.py` | Generate a new scenario. Body includes `mini_app_id` and prior `turns` (≤6). |
-| POST | `/api/responses` | `responses_create.py` | Evaluate a user response. Body includes `mini_app_id`, `scenario`, `user_response`, and prior `turns` (≤6). |
+| GET | `/api/health` | `routers/health.py` | Liveness probe. |
+| GET | `/api/mini-apps` | `routers/mini_apps.py` | List all registered mini-apps for the hub. |
+| GET | `/api/mini-apps/{id}` | `routers/mini_apps.py` | Get a single mini-app's metadata and orientation copy. |
+| POST | `/api/scenarios` | `routers/scenarios.py` | Generate a new scenario. Body includes `mini_app_id` and prior `turns` (≤6). |
+| POST | `/api/responses` | `routers/responses.py` | Evaluate a user response. Body includes `mini_app_id`, `scenario`, `user_response`, and prior `turns` (≤6). |
 
 **Request shape — `POST /api/scenarios`:**
 ```json
@@ -308,14 +306,14 @@ The API is fully stateless. There are no session endpoints. Every call to `/api/
 }
 ```
 
-Path parameters are extracted from the request URL inside each function. Response shape is JSON with a uniform error envelope: `{"error": {"code": "...", "message": "..."}}` on failure, raw payload on success.
+Path parameters are extracted by FastAPI via route declarations. Response shape is JSON with a uniform error envelope: `{"error": {"code": "...", "message": "..."}}` on failure, raw payload on success.
 
 **Trust boundary, written down explicitly:** the backend trusts the client-supplied `turns` array. A user editing dev-tools can submit fabricated history. For this product — no scoring, no certification, no cross-session state — that's an accepted tradeoff. If a future version introduces tracking or scoring, this decision must be revisited (see §16).
 
 #### 8.2.3 Core Models
 
 ```python
-# _lib/models.py
+# backend/lib/models.py
 
 class CriterionSpec(BaseModel):
     """Declares one evaluation dimension for a mini-app."""
@@ -350,7 +348,7 @@ class MiniAppDefinition(BaseModel):
     scenario_system_prompt: str            # how to generate a scenario
     evaluation_system_prompt: str          # how to assess a response
     criteria: list[CriterionSpec]
-    ip_resources: list[str] = []           # filenames in _lib/ip_resources/ to inject
+    ip_resources: list[str] = []           # filenames in lib/ip_resources/ to inject
 
     # Optional hooks for mini-apps that need extra structured output
     extras_schema: dict | None = None      # JSON schema fragment for FeedbackPayload.extras
@@ -369,7 +367,7 @@ The registry is the mechanism that turns "add a Python file" into "the mini-app 
 **Pattern A (chosen): explicit registration in `definitions/__init__.py`.**
 
 ```python
-# _lib/definitions/__init__.py
+# backend/lib/definitions/__init__.py
 from .reflect_and_check import REFLECT_AND_CHECK
 from .follow_the_thread import FOLLOW_THE_THREAD
 from .read_between_the_lines import READ_BETWEEN_THE_LINES
@@ -388,7 +386,7 @@ ALL_DEFINITIONS: list[MiniAppDefinition] = [
 ```
 
 ```python
-# _lib/registry.py
+# backend/lib/registry.py
 from .definitions import ALL_DEFINITIONS
 
 class MiniAppRegistry:
@@ -414,16 +412,16 @@ Why explicit registration over auto-discovery (pattern B) or a YAML manifest (pa
 
 **The promise to the team: adding a 7th mini-app is a 2-step change.**
 
-1. Create `_lib/definitions/new_app.py` exporting one `MiniAppDefinition`.
-2. Add one import + one list entry in `_lib/definitions/__init__.py`.
+1. Create `backend/lib/definitions/new_app.py` exporting one `MiniAppDefinition`.
+2. Add one import + one list entry in `backend/lib/definitions/__init__.py`.
 
-That's it. No frontend change. No new HTTP route. No engine change. No infra change. The hub fetches `/api/mini-apps`, the new card appears, and `/api/sessions/{id}/scenarios` and `/api/sessions/{id}/responses` route through the same engine using the new definition.
+That's it. No frontend change. No new HTTP route. No engine change. No infra change. The hub fetches `/api/mini-apps`, the new card appears, and `/api/scenarios` and `/api/responses` route through the same engine using the new definition.
 
 #### 8.2.5 Example Mini-App Definition (Mini-App 1, abbreviated)
 
 ```python
-# _lib/definitions/reflect_and_check.py
-from .._lib.models import MiniAppDefinition, CriterionSpec
+# backend/lib/definitions/reflect_and_check.py
+from ..lib.models import MiniAppDefinition, CriterionSpec
 
 REFLECT_AND_CHECK = MiniAppDefinition(
     id="reflect-and-check",
@@ -505,7 +503,7 @@ extras_schema={
 #### 8.2.6 The Generic Engine
 
 ```python
-# _lib/engine.py
+# backend/lib/engine.py
 
 class Engine:
     def __init__(self, llm: LLMClient, ip_loader: IPResourceLoader, safety: SafetyChecker):
@@ -555,38 +553,47 @@ class Engine:
 
 The engine never knows what mini-app it's running. It reads the definition, composes prompts, calls the LLM, validates output, runs safety checks, and returns. Every code path it executes is the same for all six mini-apps.
 
-#### 8.2.7 Function Handlers (thin adapters)
+#### 8.2.7 Route Handlers (thin adapters)
 
 ```python
-# netlify/functions/responses_create.py
-import json
-from _lib.registry import REGISTRY
-from _lib.engine import Engine
-from _lib.llm_client import LLMClient
-from _lib.safety import SafetyChecker
-from _lib.ip_resources_loader import IPResourceLoader
-from _lib.models import Turn
+# backend/routers/responses.py
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+from ..lib.registry import REGISTRY, UnknownMiniAppError
+from ..lib.engine import Engine
+from ..lib.llm_client import LLMClient
+from ..lib.safety import SafetyChecker
+from ..lib.ip_resources_loader import IPResourceLoader
+from ..lib.models import Turn
 
-def handler(event, context):
-    body = json.loads(event["body"])
-    mini_app_id  = body["mini_app_id"]
-    scenario     = body["scenario"]
-    user_response = body["user_response"]
-    turns        = [Turn(**t) for t in body.get("turns", [])][-6:]  # enforce ≤6
+router = APIRouter()
 
-    definition = REGISTRY.get(mini_app_id)   # 404 if unknown
+class ResponseRequest(BaseModel):
+    mini_app_id: str
+    scenario: str
+    user_response: str
+    turns: list[Turn] = []
+
+@router.post("/responses")
+async def create_response(body: ResponseRequest):
+    turns = body.turns[-6:]  # enforce ≤6
+
+    try:
+        definition = REGISTRY.get(body.mini_app_id)
+    except UnknownMiniAppError:
+        raise HTTPException(status_code=404, detail={"code": "mini_app_not_found"})
 
     engine = Engine(LLMClient(), IPResourceLoader(), SafetyChecker())
     feedback = await engine.evaluate_response(
         definition=definition,
-        scenario=scenario,
-        user_response=user_response,
+        scenario=body.scenario,
+        user_response=body.user_response,
         history=turns,
     )
-    return _ok(feedback.model_dump())
+    return feedback.model_dump()
 ```
 
-The handler does I/O (parse request, validate inputs, return JSON). The engine does work. The definition declares behavior. There is no session lookup and no datastore call — the request body is everything the function needs.
+The router does I/O (parse request via Pydantic, validate inputs, return JSON). The engine does work. The definition declares behavior. There is no session lookup and no datastore call — the request body is everything the handler needs.
 
 The frontend is responsible for sending only the most recent 6 turns; the backend additionally enforces `[-6:]` as a defensive cap so a misbehaving client cannot blow up the LLM context window.
 
@@ -630,7 +637,7 @@ type SessionState = {
      "turns": [ /* 0–6 prior turns from React state */ ]
    }
 
-2. netlify.toml redirect routes to netlify/functions/responses_create.py.
+2. FastAPI routes the request to the `POST /api/responses` handler in `routers/responses.py`.
 
 3. Handler:
      a. Parse body. Validate required fields. Trim turns[] to last 6.
@@ -678,14 +685,15 @@ type SessionState = {
 | Rate limit (LLM provider) | 429 | `rate_limited` | UI shows "try again in a moment." |
 | Function execution timeout | 504 | `function_timeout` | UI offers retry; new scenario suggested if recurrent. |
 
-#### 8.2.11 Netlify-Specific Constraints
+#### 8.2.11 FastAPI Deployment Constraints
 
-- **Cold starts.** Python function cold-start latency is typically a few hundred ms to ~1s. The UI's loading states (§8.1) absorb this; no warm-up pings required for v1.
-- **Execution time limit.** Netlify Functions have a hard execution timeout (10s standard; 26s on higher tiers). Scenario generation and evaluation must each complete inside this budget. A single LLM call with one structured-output retry plus a safety check must fit. If timeouts become common, the engine must be refactored to skip the safety regeneration on the second attempt.
-- **Payload limits.** Functions cap request and response bodies at 6 MB. Practice Lab payloads (≤6 turns of feedback JSON) are well under this even in the worst case.
-- **Secrets.** The LLM API key is a Netlify environment variable scoped to Functions. It is never bundled into the frontend.
-- **No persistent infrastructure.** No Blobs, no scheduled cleanup functions, no per-environment data stores. Reduces ops surface area to: deploy, watch logs.
-- **Local development.** Engineering uses `netlify dev` to run the React build and Functions together, mirroring production routing.
+- **Startup time.** FastAPI starts once per process (not per-request). Import of definitions and registry assembly happen at startup, not during request handling. No per-request cold start.
+- **Execution time.** No hard platform timeout like serverless; configure an appropriate request timeout (e.g., 30s via `uvicorn` or a reverse proxy) to bound runaway LLM calls. Scenario generation and evaluation must each fit comfortably within this budget.
+- **Payload limits.** Standard HTTP body size limits apply; configure the server to reject excessively large bodies. Practice Lab payloads (≤6 turns of feedback JSON) are well within any reasonable limit.
+- **Secrets.** The LLM API key is an environment variable loaded by the FastAPI process. It is never bundled into the frontend.
+- **No persistent infrastructure.** No database, no cache, no per-environment data stores. Reduces ops surface area to: deploy, watch logs.
+- **Local development.** Engineering runs `uvicorn backend.main:app --reload` for the backend and `npm run dev` (Vite) for the frontend. The Vite dev server proxies `/api/*` to the local FastAPI instance.
+- **CORS.** The FastAPI app must configure `CORSMiddleware` to allow requests from the frontend origin (both local dev and production).
 
 #### 8.2.12 Testing Strategy
 
@@ -723,14 +731,14 @@ These run with a `FakeLLMClient` that returns canned JSON, so they are fast, her
 **Definition-conformance tests.** A single test iterates `REGISTRY.list()` and asserts:
 - `id` is unique across all definitions and is URL-safe.
 - All `criteria[].name` values are unique within a definition.
-- Every filename in `ip_resources` exists on disk under `_lib/ip_resources/`.
+- Every filename in `ip_resources` exists on disk under `lib/ip_resources/`.
 - `extras_schema` (if present) is itself valid JSON Schema.
 - `scenario_system_prompt` and `evaluation_system_prompt` are non-empty.
 - The orientation copy is non-empty and under a sane character cap (e.g., 1,500 chars).
 
 This is the safety net that makes the "just add a definition file" promise reliable. A misconfigured 7th mini-app fails CI before it ships.
 
-**Contract tests — function handlers.** Run via `netlify dev` against the local emulator with a `FakeLLMClient`. For each endpoint:
+**Contract tests — route handlers.** Run against a local FastAPI `TestClient` with a `FakeLLMClient` injected via dependency override. For each endpoint:
 - Happy path: well-formed request returns 200 with the expected schema.
 - Each failure mode in the §8.2.10 error model returns the documented HTTP code and error code.
 - The defensive `turns[-6:]` trim works (send 100 turns, observe only 6 reach the engine via fake LLM call inspection).
@@ -868,8 +876,8 @@ Without this, Layer 1 ships and Layer 2 doesn't. The product would still work, b
 - **No server-side storage of user responses.** The backend is fully stateless. User responses and feedback exist only in the browser's React state for the duration of the session. Closing the tab, refreshing, or returning to the hub clears everything.
 - **No session IDs.** There is no server-side session concept.
 - **In transit:** user responses travel over HTTPS to the LLM provider via the backend Function. They are not stored at rest by the Practice Lab. They may be subject to the LLM provider's retention policy, which CPL must review when finalizing the LLM provider choice (see §15).
-- **Logging:** Netlify Function logs may include request timestamps, mini-app id, latency, and error codes. They must not include user-typed content or LLM output. Engineering is responsible for ensuring no `print` or `log` statement emits user content.
-- **Telemetry (v1):** Anonymous counters only — scenarios generated, responses submitted, errors. No content captured. Netlify Analytics may be enabled at the site level for traffic-only metrics.
+- **Logging:** FastAPI application logs may include request timestamps, mini-app id, latency, and error codes. They must not include user-typed content or LLM output. Engineering is responsible for ensuring no `print` or `logger` call emits user content.
+- **Telemetry (v1):** Anonymous counters only — scenarios generated, responses submitted, errors. No content captured. A lightweight analytics integration (e.g., Plausible or similar) may be enabled on the frontend for traffic-only metrics.
 
 ---
 
@@ -898,16 +906,16 @@ These are loaded as static resources on the backend at startup. Updates to CPL I
 
 ## 13. Tool Integrations (Source Spec)
 
-The source spec references Bubble for UI and AntiGravity for AI logic. The architecture in this PRD replaces both with React on Netlify (UI) and Python Netlify Functions calling Google AI Studio (AI logic). Google Docs remains the source of CPL training curriculum and IP and feeds the prompt resource files.
+The source spec references Bubble for UI and AntiGravity for AI logic. The architecture in this PRD replaces both with React (UI) and a Python FastAPI backend calling Google AI Studio (AI logic). Google Docs remains the source of CPL training curriculum and IP and feeds the prompt resource files.
 
-If CPL has a hard requirement to ship on Bubble + AntiGravity, this PRD will need a follow-up alignment session — Netlify is fundamentally incompatible with a Bubble-hosted UI.
+If CPL has a hard requirement to ship on Bubble + AntiGravity, this PRD will need a follow-up alignment session — a FastAPI-backed React app is fundamentally incompatible with a Bubble-hosted UI.
 
 ---
 
 ## 14. Non-Functional Requirements
 
-- **Performance:** Scenario generation p95 ≤ 6s, evaluation p95 ≤ 8s end-to-end, **measured from warm function invocations**. Cold-start invocations may add up to ~1s; the UI absorbs this with descriptive loading states. Both operations must complete inside Netlify's per-function execution timeout (see §8.2).
-- **Availability:** Inherits Netlify's platform SLA. Target 99.5% during CPL business hours.
+- **Performance:** Scenario generation p95 ≤ 6s, evaluation p95 ≤ 8s end-to-end. The FastAPI server stays warm between requests; latency is dominated by the LLM round-trip. Both operations must complete within the configured server-side request timeout (see §8.2.11).
+- **Availability:** Target 99.5% during CPL business hours. Determined by the chosen hosting platform's SLA.
 - **Browser support:** Latest two major versions of Chrome, Safari, Firefox, Edge.
 - **Mobile:** Responsive layout. Functional on phones in portrait — full read/type/feedback flow must work.
 - **Accessibility:** WCAG 2.1 AA.
@@ -916,11 +924,11 @@ If CPL has a hard requirement to ship on Bubble + AntiGravity, this PRD will nee
 
 ## 15. Open Questions
 
-1. ~~**Hosting and deployment.**~~ **Resolved:** Netlify (frontend + Python Functions + Blobs) per CPL direction.
-2. **Netlify plan tier.** Confirm which Netlify plan CPL is on — this determines Function execution timeout (10s standard vs. 26s on higher tiers), Blobs quota, and bandwidth. If on the standard tier, evaluation prompts must be tuned to fit comfortably under 10s.
+1. ~~**Hosting and deployment.**~~ **Resolved:** React static build on CDN; FastAPI backend as standalone ASGI service.
+2. **Backend hosting platform.** Confirm which platform will host the FastAPI service (e.g., Railway, Fly.io, Render). This determines the request timeout budget, resource limits, and cost model.
 3. **LLM provider and model.** Confirm Google AI Studio (Gemini) as the model and confirm budget/quota assumptions.
 4. **Topic library for scenarios.** Should scenario topics be drawn from a curated CPL list, or generated freely within neutrality guardrails?
-5. **Bubble/AntiGravity alignment.** Is the React + Netlify direction acceptable, or is Bubble required (see §13)?
+5. **Bubble/AntiGravity alignment.** Is the React + FastAPI direction acceptable, or is Bubble required (see §13)?
 6. **User-supplied topics in Mini-App 4.** Source spec lists this as optional. Confirm in or out for v1.
 
 ---

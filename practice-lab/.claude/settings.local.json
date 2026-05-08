@@ -17,7 +17,8 @@
       "Bash(curl -s http://localhost:9000/api/mini-apps)",
       "Bash(curl -s http://localhost:8888/.netlify/functions/health -v)",
       "Bash(node \"C:\\\\nvm4w\\\\nodejs\\\\node_modules\\\\netlify-cli\\\\bin\\\\run.js\" functions:list)",
-      "Bash(node \"C:\\\\nvm4w\\\\nodejs\\\\node_modules\\\\netlify-cli\\\\bin\\\\run.js\" functions:build --functions netlify/functions)"
+      "Bash(node \"C:\\\\nvm4w\\\\nodejs\\\\node_modules\\\\netlify-cli\\\\bin\\\\run.js\" functions:build --functions netlify/functions)",
+      "PowerShell(python \"C:\\\\Users\\\\Chen\\\\Desktop\\\\CPL\\\\Apps-and-Agents-Development\\\\practice-lab\\\\fix_diagram.py\")"
     ]
   }
 }
