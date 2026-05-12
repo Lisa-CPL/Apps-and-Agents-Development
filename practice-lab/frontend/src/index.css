@@ -1,0 +1,46 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=DM+Serif+Display:ital@0;1&family=Lora:ital,wght@0,400..700;1,400..700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-cpl-blue: #1E4FA3;
+  --color-cpl-red: #C0392B;
+  --color-cpl-amber: #E8A838;
+  --color-cpl-bg: #F7F8FA;
+  --color-cpl-dark: #1A1A2E;
+  --color-cpl-border: #DDE3EE;
+
+  --font-serif: "DM Serif Display", serif;
+  --font-sans: "DM Sans", sans-serif;
+  --font-lora: "Lora", serif;
+}
+
+html {
+  background-image: url('https://images.unsplash.com/photo-1557682224-5b8590cb9ca6?auto=format&fit=crop&q=80&w=1920');
+  background-size: cover;
+  background-attachment: fixed;
+  background-position: center;
+}
+
+@layer base {
+  body {
+    @apply text-cpl-dark font-sans antialiased;
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    box-shadow: 0 0 100px rgba(0,0,0,0.2);
+    position: relative;
+    background: transparent;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+

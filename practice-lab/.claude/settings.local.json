@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ' *)",
+      "Bash(python dev_server.py)",
+      "Bash(curl -s http://localhost:8888/api/health)",
+      "Bash(curl -s http://localhost:8888/.netlify/functions/health)",
+      "Bash(netstat -ano)",
+      "Bash(findstr \":8888\")",
+      "Bash(tasklist /FI \"PID eq 7584\" /FO LIST)",
+      "Bash(tasklist /FI \"PID eq 12876\" /FO LIST)",
+      "PowerShell(Get-Process *)",
+      "PowerShell(Get-NetTCPConnection *)",
+      "PowerShell(Get-CimInstance *)",
+      "Bash(wmic process *)",
+      "Bash(curl -s http://localhost:9000/api/health)",
+      "Bash(curl -s http://localhost:9000/api/mini-apps)",
+      "Bash(curl -s http://localhost:8888/.netlify/functions/health -v)",
+      "Bash(node \"C:\\\\nvm4w\\\\nodejs\\\\node_modules\\\\netlify-cli\\\\bin\\\\run.js\" functions:list)",
+      "Bash(node \"C:\\\\nvm4w\\\\nodejs\\\\node_modules\\\\netlify-cli\\\\bin\\\\run.js\" functions:build --functions netlify/functions)",
+      "PowerShell(python \"C:\\\\Users\\\\Chen\\\\Desktop\\\\CPL\\\\Apps-and-Agents-Development\\\\practice-lab\\\\fix_diagram.py\")",
+      "Bash(pip install *)",
+      "Bash(python -m venv .venv)"
+    ]
+  }
+}
