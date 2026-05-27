@@ -14,7 +14,7 @@ export const ResponseInput: React.FC = () => {
   if (!app) return null;
 
   return (
-    <div className="min-h-screen bg-cpl-bg flex flex-col">
+    <div className="min-h-screen bg-transparent flex flex-col">
       <TopBar title="Your Response" showBack onBack={() => navigate(`/practice/${appId}/scenario`)} />
       
       <main className="flex-1 px-6 pt-6 pb-24 overflow-y-auto">
@@ -30,7 +30,11 @@ export const ResponseInput: React.FC = () => {
             </div>
          </div>
 
-         <div className="relative mb-8">
+         <motion.div 
+           initial={{ opacity: 0, y: 10 }}
+           animate={{ opacity: 1, y: 0 }}
+           className="relative mb-8"
+         >
             <textarea 
               value={response}
               onChange={(e) => setResponse(e.target.value)}
@@ -38,10 +42,22 @@ export const ResponseInput: React.FC = () => {
               placeholder="How would you respond to Alex?"
             />
             <div className="absolute top-[-10px] right-6 bg-white px-3 py-1 rounded-full border border-cpl-border shadow-sm flex items-center gap-2">
-               <div className="w-2 h-2 rounded-full bg-cpl-blue animate-pulse" />
-               <span className="text-[10px] font-bold text-gray-400">ANALYZING IN REAL-TIME</span>
+               <motion.div 
+                 animate={{ 
+                   scale: response.length > 0 ? [1, 1.2, 1] : 1,
+                   backgroundColor: response.length > 0 ? "#1E4FA3" : "#9CA3AF"
+                 }}
+                 transition={{ repeat: response.length > 0 ? Infinity : 0, duration: 1.5 }}
+                 className="w-2 h-2 rounded-full" 
+               />
+               <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">
+                 {response.length > 0 ? 'Analyzing Drift' : 'Ready for input'}
+               </span>
             </div>
-         </div>
+            <div className="absolute bottom-4 right-6 text-[10px] font-bold text-gray-300">
+              {response.length} characters
+            </div>
+         </motion.div>
 
          <div className="bg-white p-5 rounded-2xl border border-cpl-border border-b-4 border-b-cpl-blue/20">
             <div className="flex items-center gap-2 mb-3">
@@ -54,7 +70,7 @@ export const ResponseInput: React.FC = () => {
          </div>
       </main>
 
-      <div className="fixed bottom-0 left-0 right-0 p-6 bg-white border-t border-cpl-border max-w-[480px] mx-auto">
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-4xl p-6 bg-white border-t border-cpl-border transition-all duration-300">
         <button 
           disabled={!response.trim()}
           onClick={() => navigate(`/practice/${appId}/feedback`)}
