@@ -13,7 +13,7 @@ export const NextAction: React.FC = () => {
   if (!app) return null;
 
   return (
-    <div className="min-h-screen bg-cpl-bg flex flex-col">
+    <div className="min-h-screen bg-transparent flex flex-col">
       <TopBar title="Next Steps" showBack onBack={() => navigate(`/practice/${appId}/feedback`)} />
       
       <main className="flex-1 px-6 pt-10 pb-24 overflow-y-auto">
@@ -70,7 +70,7 @@ export const NextAction: React.FC = () => {
          </div>
       </main>
 
-      <div className="fixed bottom-0 left-0 right-0 p-6 bg-white border-t border-cpl-border max-w-[480px] mx-auto text-center">
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-4xl p-6 bg-white border-t border-cpl-border text-center transition-all duration-300">
         <button 
           onClick={() => navigate(`/practice/${appId}/complete`)}
           className="w-full bg-cpl-blue text-white font-bold py-5 rounded-2xl shadow-xl flex items-center justify-center gap-3 active:scale-[0.98] transition-all group"

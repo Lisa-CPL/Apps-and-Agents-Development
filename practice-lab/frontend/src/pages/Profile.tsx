@@ -38,7 +38,18 @@ export const Profile: React.FC = () => {
               </span>
             )}
           </div>
-          <p className="text-xs text-gray-400 font-medium mb-3">Member since {profile.memberSince}</p>
+          <p className="text-xs text-gray-400 font-medium mb-4">Member since {profile.memberSince}</p>
+          
+          <div className="flex gap-4 mb-6">
+            <div className="bg-white px-4 py-2 rounded-2xl border border-cpl-border shadow-sm flex flex-col items-center">
+              <span className="text-lg font-serif font-black text-cpl-blue">{profile.xp.toLocaleString()}</span>
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">XP Earned</span>
+            </div>
+            <div className="bg-white px-4 py-2 rounded-2xl border border-cpl-border shadow-sm flex flex-col items-center">
+              <span className="text-lg font-serif font-black text-cpl-red">{profile.completedLabs.length}</span>
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">Labs Done</span>
+            </div>
+          </div>
           
           {profile.bio && (
             <div className="max-w-[280px] mx-auto">

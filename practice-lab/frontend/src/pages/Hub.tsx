@@ -53,7 +53,7 @@ export const Hub: React.FC = () => {
 
       <div className="px-6 py-8">
         <h3 className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.15em] mb-6">Choose a skill to practice</h3>
-        <div className="grid gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {MINI_APPS.map((app, index) => (
             <motion.div
               key={app.id}

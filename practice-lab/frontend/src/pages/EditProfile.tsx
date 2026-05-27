@@ -35,7 +35,7 @@ export const EditProfile: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-cpl-bg pb-12">
+    <div className="min-h-screen bg-transparent pb-12">
       <TopBar title="Edit Profile" showBack onBack={() => navigate('/profile')} />
       
       <main className="px-6 py-8">

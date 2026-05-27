@@ -6,10 +6,10 @@ import { motion } from 'motion/react';
 
 export const Help: React.FC = () => {
   return (
-    <div className="min-h-screen pb-24 bg-cpl-bg">
+    <div className="min-h-screen pb-24 bg-transparent">
       <TopBar title="Help & Support" />
       <main className="px-5 pt-6">
-        <div className="relative mb-10">
+        <div className="relative mb-10 max-w-2xl mx-auto">
           <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
           <input 
             type="text" 
@@ -20,8 +20,8 @@ export const Help: React.FC = () => {
 
         <section className="mb-10">
           <h2 className="font-serif text-2xl text-cpl-blue mb-6">Quick Guides</h2>
-          <div className="grid grid-cols-2 gap-4">
-             <div className="col-span-2 bg-white p-6 rounded-2xl shadow-sm border-l-4 border-cpl-blue relative overflow-hidden group cursor-pointer active:scale-[0.98] transition-all">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+             <div className="md:col-span-2 lg:col-span-1 bg-white p-6 rounded-2xl shadow-sm border-l-4 border-cpl-blue relative overflow-hidden group cursor-pointer active:scale-[0.98] transition-all">
                 <div className="flex justify-between items-start mb-3">
                    <div className="p-2 rounded-xl rounded-tr-none bg-blue-50 text-cpl-blue group-hover:scale-110 transition-transform">
                      <MessageCircle className="w-8 h-8" strokeWidth={2.5} />
