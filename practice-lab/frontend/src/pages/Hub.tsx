@@ -1,15 +1,71 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TopBar } from '../components/TopBar';
 import { BottomNav } from '../components/BottomNav';
 import { MiniAppCard } from '../components/MiniAppCard';
-import { MINI_APPS } from '../constants';
+import { MiniApp } from '../constants';
+import { fetchMiniApps, MiniAppResponse } from '../api';
 import { motion } from 'motion/react';
 import { WelcomeModal } from '../components/WelcomeModal';
-import { MessageSquare, MessageCircle, Send } from 'lucide-react';
+import { MessageSquare, MessageCircle, Send, Loader2, AlertCircle } from 'lucide-react';
+
+/**
+ * Presentation-layer defaults for mini-apps.
+ * accentColor and iconName are UI concerns not stored in the backend.
+ * Falls back to sensible defaults for any new mini-app added on the backend.
+ */
+const APP_DISPLAY_OVERRIDES: Record<string, { accentColor: 'blue' | 'red'; iconName: string }> = {
+  'reflect-and-check':       { accentColor: 'blue', iconName: 'Ear' },
+  'follow-the-thread':       { accentColor: 'red',  iconName: 'Lightbulb' },
+  'read-between-the-lines':  { accentColor: 'blue', iconName: 'Scale' },
+  'say-it-with-context':     { accentColor: 'red',  iconName: 'Heart' },
+  'under-the-surface':       { accentColor: 'blue', iconName: 'Users' },
+  'what-did-you-mean':       { accentColor: 'red',  iconName: 'ShieldAlert' },
+};
+
+function toMiniApp(raw: MiniAppResponse, index: number): MiniApp {
+  const overrides = APP_DISPLAY_OVERRIDES[raw.id] ?? {
+    accentColor: index % 2 === 0 ? 'blue' as const : 'red' as const,
+    iconName: 'Lightbulb',
+  };
+  return {
+    id: raw.id,
+    name: raw.name,
+    description: raw.skill_one_liner,
+    estimatedTime: raw.estimated_time,
+    ...overrides,
+  };
+}
 
 export const Hub: React.FC = () => {
   const navigate = useNavigate();
+  const [apps, setApps] = useState<MiniApp[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    fetchMiniApps()
+      .then((data) => {
+        if (!cancelled) {
+          setApps(data.map(toMiniApp));
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err.message || 'Failed to load mini-apps');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <div className="min-h-screen pb-24 bg-transparent">
       <TopBar />
@@ -53,18 +109,41 @@ export const Hub: React.FC = () => {
 
       <div className="px-6 py-8">
         <h3 className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.15em] mb-6">Choose a skill to practice</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {MINI_APPS.map((app, index) => (
-            <motion.div
-              key={app.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.1 }}
+
+        {loading && (
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <Loader2 className="w-8 h-8 text-cpl-blue animate-spin" />
+            <p className="text-sm text-gray-400">Loading mini-apps…</p>
+          </div>
+        )}
+
+        {error && !loading && (
+          <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+            <AlertCircle className="w-8 h-8 text-cpl-red" />
+            <p className="text-sm text-gray-500">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-2 px-4 py-2 text-sm font-medium text-white bg-cpl-blue rounded-lg hover:bg-cpl-blue/90 transition-colors"
             >
-              <MiniAppCard app={app} />
-            </motion.div>
-          ))}
-        </div>
+              Retry
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {apps.map((app, index) => (
+              <motion.div
+                key={app.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <MiniAppCard app={app} />
+              </motion.div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="px-6 mb-12">
