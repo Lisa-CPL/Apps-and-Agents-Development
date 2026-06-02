@@ -16,7 +16,7 @@ export const MiniAppCard: React.FC<{ app: MiniApp }> = ({ app }) => {
   const handleCardClick = (e: React.MouseEvent) => {
     e.preventDefault();
     if (isAuthenticated) {
-      navigate(`/practice/${app.id}`);
+      navigate(`/practice/${app.id}`, { state: { app } });
     } else {
       navigate(`/login?redirect=/practice/${app.id}`);
     }
