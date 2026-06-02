@@ -51,3 +51,38 @@ export async function generateScenario(miniAppId: string): Promise<string> {
   const data: { scenario: string } = await res.json();
   return data.scenario;
 }
+
+export interface CriterionAssessment {
+  name: string;
+  verdict: 'strong' | 'partial' | 'needs work';
+  what_worked: string | null;
+  what_to_improve: string | null;
+}
+
+export interface FeedbackPayload {
+  user_response: string;
+  criteria: CriterionAssessment[];
+  suggestion: string;
+  extras: Record<string, unknown>;
+}
+
+export async function submitResponse(
+  miniAppId: string,
+  scenario: string,
+  userResponse: string,
+): Promise<FeedbackPayload> {
+  const res = await fetch(`${API_BASE}/responses`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      mini_app_id: miniAppId,
+      scenario,
+      user_response: userResponse,
+      turns: [],
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to evaluate response: ${res.status} ${res.statusText}`);
+  }
+  return res.json();
+}

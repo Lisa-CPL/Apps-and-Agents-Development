@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { TopBar } from '../components/TopBar';
 import { CriterionSpec, fetchMiniAppDetail, generateScenario } from '../api';
 import { motion } from 'motion/react';
@@ -8,18 +8,24 @@ import { MessageSquare, ChevronRight, Loader2, AlertCircle, Target, RefreshCw } 
 export const Scenario: React.FC = () => {
   const { appId } = useParams<{ appId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const existingScenario = (location.state as { scenario?: string } | null)?.scenario ?? null;
 
-  const [scenario, setScenario] = useState<string | null>(null);
+  const [scenario, setScenario] = useState<string | null>(existingScenario);
   const [criteria, setCriteria] = useState<CriterionSpec[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(existingScenario === null);
   const [error, setError] = useState<string | null>(null);
 
-  const load = () => {
+  const load = (forceNew = false) => {
     if (!appId) return;
     setLoading(true);
     setError(null);
 
-    Promise.all([generateScenario(appId), fetchMiniAppDetail(appId)])
+    const scenarioPromise = forceNew || existingScenario === null
+      ? generateScenario(appId)
+      : Promise.resolve(existingScenario);
+
+    Promise.all([scenarioPromise, fetchMiniAppDetail(appId)])
       .then(([scenarioText, detail]) => {
         setScenario(scenarioText);
         setCriteria(detail.criteria);
@@ -28,7 +34,14 @@ export const Scenario: React.FC = () => {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { load(); }, [appId]);
+  useEffect(() => {
+    if (existingScenario) {
+      // Criteria still need to be fetched even when scenario is reused
+      fetchMiniAppDetail(appId!).then((d) => setCriteria(d.criteria));
+    } else {
+      load();
+    }
+  }, [appId]);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -60,7 +73,7 @@ export const Scenario: React.FC = () => {
           <AlertCircle className="w-8 h-8 text-cpl-red" />
           <p className="text-sm text-gray-500">{error ?? 'Something went wrong.'}</p>
           <button
-            onClick={load}
+            onClick={() => load(true)}
             className="mt-2 px-4 py-2 text-sm font-medium text-white bg-cpl-blue rounded-lg hover:bg-cpl-blue/90 transition-colors flex items-center gap-2"
           >
             <RefreshCw className="w-4 h-4" />
@@ -89,7 +102,7 @@ export const Scenario: React.FC = () => {
             <span className="text-xs font-bold text-gray-500">Alex • Counter-perspective</span>
           </div>
           <button
-            onClick={load}
+            onClick={() => load(true)}
             className="bg-white px-2 py-1 rounded-md border border-cpl-border flex items-center gap-1.5 hover:bg-gray-50 transition-colors"
             title="Generate a new scenario"
           >
