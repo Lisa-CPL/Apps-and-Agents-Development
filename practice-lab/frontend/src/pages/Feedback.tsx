@@ -167,7 +167,7 @@ export const Feedback: React.FC = () => {
           Retry
         </button>
         <button
-          onClick={() => navigate(`/practice/${appId}/next`)}
+          onClick={() => navigate(`/practice/${appId}/next`, { state: { feedback, scenario } })}
           className="flex-[2] bg-cpl-blue text-white font-bold py-5 rounded-2xl shadow-xl flex items-center justify-center gap-3 active:scale-[0.98] transition-all group"
         >
           See Next Step
