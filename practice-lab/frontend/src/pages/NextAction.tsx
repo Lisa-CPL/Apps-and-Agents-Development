@@ -34,7 +34,7 @@ export const NextAction: React.FC = () => {
 
         <div className="space-y-4">
           <button
-            onClick={() => navigate(`/practice/${appId}/complete`)}
+            onClick={() => navigate(`/practice/${appId}/complete`, { state })}
             className="w-full bg-white p-6 rounded-3xl border border-cpl-border shadow-sm flex items-center justify-between group hover:border-cpl-blue transition-colors"
           >
             <div className="flex items-center gap-4">
@@ -76,7 +76,7 @@ export const NextAction: React.FC = () => {
 
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-4xl p-6 bg-white border-t border-cpl-border transition-all duration-300">
         <button
-          onClick={() => navigate(`/practice/${appId}/complete`)}
+          onClick={() => navigate(`/practice/${appId}/complete`, { state })}
           className="w-full bg-cpl-blue text-white font-bold py-5 rounded-2xl shadow-xl flex items-center justify-center gap-3 active:scale-[0.98] transition-all group"
         >
           Complete Session
