@@ -21,9 +21,7 @@ export default defineConfig(({ mode }) => {
       hmr: process.env.DISABLE_HMR !== 'true',
       proxy: {
         '/api': {
-          target: mode === 'production'
-            ? 'https://cplpracticelab.onrender.com'
-            : 'http://localhost:8000',
+          target: 'http://localhost:8000',
           changeOrigin: true,
         },
       },
