@@ -20,7 +20,8 @@
       "Bash(node \"C:\\\\nvm4w\\\\nodejs\\\\node_modules\\\\netlify-cli\\\\bin\\\\run.js\" functions:build --functions netlify/functions)",
       "PowerShell(python \"C:\\\\Users\\\\Chen\\\\Desktop\\\\CPL\\\\Apps-and-Agents-Development\\\\practice-lab\\\\fix_diagram.py\")",
       "Bash(pip install *)",
-      "Bash(python -m venv .venv)"
+      "Bash(python -m venv .venv)",
+      "Skill(update-config)"
     ]
   }
 }

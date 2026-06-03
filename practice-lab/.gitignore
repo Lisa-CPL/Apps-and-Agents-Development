@@ -4,3 +4,6 @@
 # Environment variables — never commit
 .env
 .env.local
+
+# Claude files
+.claude
