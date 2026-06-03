@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 
@@ -25,6 +25,16 @@ import { EditProfile } from './pages/EditProfile';
 import { Community } from './pages/Community';
 import { ProfileProvider } from './contexts/ProfileContext';
 import { AuthProvider } from './contexts/AuthContext';
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -57,10 +67,13 @@ function AnimatedRoutes() {
 function PageWrapper({ children }: { children: React.ReactNode }) {
   return (
     <motion.div
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      transition={{ duration: 0.3, ease: "easeInOut" }}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.98 }}
+      transition={{ 
+        duration: 0.4, 
+        ease: [0.23, 1, 0.32, 1] // More organic easing
+      }}
       className="min-h-screen"
     >
       {children}
@@ -73,7 +86,8 @@ export default function App() {
     <AuthProvider>
       <ProfileProvider>
         <BrowserRouter>
-          <div className="max-w-[480px] mx-auto min-h-screen shadow-2xl bg-white/90 backdrop-blur-sm overflow-x-hidden relative">
+          <ScrollToTop />
+          <div className="w-full max-w-4xl mx-auto min-h-screen shadow-2xl bg-white/90 backdrop-blur-sm overflow-x-hidden relative transition-all duration-300">
             <AnimatedRoutes />
           </div>
         </BrowserRouter>

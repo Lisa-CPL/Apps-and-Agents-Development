@@ -40,8 +40,8 @@ export const Community: React.FC = () => {
         </motion.section>
 
         {/* Community Stats */}
-        <section className="grid grid-cols-2 gap-4">
-          <div className="bg-white/90 backdrop-blur-sm p-5 rounded-2xl border border-cpl-border shadow-sm flex flex-col gap-1">
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="md:col-span-2 bg-white/90 backdrop-blur-sm p-5 rounded-2xl border border-cpl-border shadow-sm flex flex-col gap-1">
             <span className="text-2xl font-serif text-cpl-blue">1.2k+</span>
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Active Learners</span>
           </div>
